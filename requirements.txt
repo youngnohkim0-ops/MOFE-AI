@@ -1,0 +1,10 @@
+streamlit>=1.32
+python-dotenv>=1.0
+openai>=1.40
+langchain-openai>=0.2
+langchain-community>=0.3
+langchain-core>=0.3
+langchain-text-splitters>=0.3
+pypdf>=4.2
+supabase>=2.0
+numpy>=1.24
