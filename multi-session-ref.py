@@ -24,8 +24,24 @@ from supabase import Client, create_client
 # --- 경로: AI-Education 루트 기준 ---
 REPO_ROOT = Path(__file__).resolve().parents[2]
 ENV_PATH = REPO_ROOT / ".env"
-LOG_DIR = REPO_ROOT / "logs"
-LOG_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def _resolve_log_dir() -> Path:
+    """로컬은 REPO_ROOT/logs, Streamlit Cloud 등 읽기 전용 환경은 /tmp 하위 사용."""
+    candidates = (
+        REPO_ROOT / "logs",
+        Path(tempfile.gettempdir()) / "multi-session-ref-logs",
+    )
+    for d in candidates:
+        try:
+            d.mkdir(parents=True, exist_ok=True)
+            return d
+        except OSError:
+            continue
+    return Path(tempfile.gettempdir())
+
+
+LOG_DIR = _resolve_log_dir()
 
 EMBED_MODEL = "text-embedding-3-small"
 LLM_MODEL = "gpt-4o-mini"
@@ -39,11 +55,17 @@ MEMORY_TURNS = 50
 for noisy in ("httpx", "httpcore", "urllib3", "openai", "langchain", "langchain_openai"):
     logging.getLogger(noisy).setLevel(logging.WARNING)
 
-log_path = LOG_DIR / f"chatbot_{datetime.now().strftime('%Y%m%d')}.log"
+_log_handlers: list[logging.Handler] = []
+try:
+    _log_path = LOG_DIR / f"chatbot_{datetime.now().strftime('%Y%m%d')}.log"
+    _log_handlers.append(logging.FileHandler(_log_path, encoding="utf-8"))
+except OSError:
+    _log_handlers.append(logging.StreamHandler())
+
 logging.basicConfig(
     level=logging.WARNING,
     format="%(asctime)s %(levelname)s %(name)s %(message)s",
-    handlers=[logging.FileHandler(log_path, encoding="utf-8")],
+    handlers=_log_handlers,
 )
 
 
