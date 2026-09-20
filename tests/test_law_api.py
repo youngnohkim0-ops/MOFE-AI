@@ -136,6 +136,37 @@ def test_resolve_article_missing_law_name_raises():
         resolve_article(client, query)
 
 
+def test_find_current_law_prefers_current_status_over_newer_repealed_entry():
+    # 연혁(폐지) 법령의 시행일자가 더 최근이더라도, 현행연혁코드가 "현행"인 법령을 우선한다.
+    multi_status_xml = """<?xml version="1.0" encoding="UTF-8"?>
+    <LawSearch>
+      <law id="1">
+        <법령일련번호>111</법령일련번호>
+        <법령명한글>소득세법</법령명한글>
+        <법령ID>001234</법령ID>
+        <공포일자>20220101</공포일자>
+        <시행일자>20220701</시행일자>
+        <법령구분명>법률</법령구분명>
+        <현행연혁코드>현행</현행연혁코드>
+      </law>
+      <law id="2">
+        <법령일련번호>222</법령일련번호>
+        <법령명한글>소득세법</법령명한글>
+        <법령ID>001234</법령ID>
+        <공포일자>20230101</공포일자>
+        <시행일자>20231201</시행일자>
+        <법령구분명>법률</법령구분명>
+        <현행연혁코드>연혁</현행연혁코드>
+      </law>
+    </LawSearch>
+    """
+    client = _make_client([multi_status_xml])
+    law = client.find_current_law("소득세법")
+    assert law is not None
+    assert law.mst == "111"
+    assert law.status == "현행"
+
+
 def test_find_subordinate_laws_and_related_articles():
     client = _make_client(
         [

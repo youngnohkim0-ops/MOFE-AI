@@ -35,6 +35,8 @@ class LawSummary:
     law_type: str
     promulgation_date: str
     enforcement_date: str
+    status: str = ""
+    """법제처 현행연혁코드(예: "현행", "연혁"). API가 값을 안 주면 빈 문자열."""
 
 
 @dataclass(frozen=True)

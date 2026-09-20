@@ -83,16 +83,24 @@ class LawOpenApiClient:
                     law_type=_text(node, "법령구분명") or infer_law_type(name),
                     promulgation_date=_text(node, "공포일자") or "",
                     enforcement_date=_text(node, "시행일자") or "",
+                    status=_text(node, "현행연혁코드") or "",
                 )
             )
         return results
 
     def find_current_law(self, law_name: str) -> LawSummary | None:
-        """이름이 정확히 일치하는 현행 법령을 찾는다(가장 최근 시행일자 우선)."""
+        """이름이 정확히 일치하는 현행 법령을 찾는다.
+
+        현행연혁코드 정보가 있으면 "현행"인 법령만 우선 고려해 폐지·개정 전
+        연혁 법령이 잘못 선택되지 않도록 하고, 그중 가장 최근 시행일자를 택한다.
+        상태 정보가 없는 응답이면(과거 스키마 등) 기존처럼 시행일자만으로 정렬한다.
+        """
         candidates = [law for law in self.search_law(law_name) if law.name == law_name]
         if not candidates:
             return None
-        return sorted(candidates, key=lambda law: law.enforcement_date, reverse=True)[0]
+        current_only = [law for law in candidates if law.status == "현행"]
+        pool = current_only or candidates
+        return sorted(pool, key=lambda law: law.enforcement_date, reverse=True)[0]
 
     def get_law_xml(self, mst: str) -> ET.Element:
         return self._get(LAW_SERVICE_URL, {"target": "law", "MST": mst})
